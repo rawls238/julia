@@ -1657,7 +1657,9 @@ Errors
    .. code-block:: julia
        backtrace()
 
-   Get a backtrace object for the current program point.
+   Get a backtrace for the current location, represented as a Vector{Ptr{Void}} of addresses. To process these array    entries, use ``ccall(:jl_lookup_code_address, Any, (Ptr{Void},Cint), bt_addresses[i], false)`` which will return a tuple    of address information: symbol, file, line, inlined file, inlined line, fromC (inlined file/line represent the location    into which a piece of code was inlined; fromC indicates whether the address in question is in C code rather than Julia).
+
+   (grep the codebase for ``backtrace`` or ``jl_lookup_code_address`` to find several usage examples)
 
 .. function:: catch_backtrace()
 
@@ -1665,7 +1667,7 @@ Errors
    .. code-block:: julia
        catch_backtrace()
 
-   Get the backtrace of the current exception, for use within ``catch`` blocks.
+   Get the backtrace of the current exception, for use within ``catch`` blocks only. Format and address lookup process    are the same as for ``backtrace``\ .
 
 .. function:: assert(cond)
 
