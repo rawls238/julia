@@ -1062,6 +1062,17 @@
                  (break ,bb)))
         (else (map (lambda (x) (replace-return x bb ret retval)) e))))
 
+(define (replace-try-break e finalb)
+  (cond ((atom? e) e)
+        ((and (quoted? e) (not (eq? (car e) 'break)) e))
+        ((or (eq? (car e) 'lambda)
+             (eq? (car e) 'function)
+         (eq? (car e) 'stagedfunction)
+             (eq? (car e) '->)) e)
+        ((eq? (car e) 'break)
+                `(block ,finalb ,e))
+        (else (map (lambda (x) (replace-try-break x finalb)) e))))
+
 (define (expand-binding-forms e)
   (cond
    ((atom? e) e)
@@ -1218,16 +1229,16 @@
                                (gensy)))
                      (retval (if hasret (gensy) #f))
                      (bb  (gensy))
-		     (finally-exception (gensy))
+		             (finally-exception (gensy))
                      (val (gensy))) ;; this is jlgensym, but llvm has trouble determining that it dominates all uses
-                 (let ((tryb   (replace-return tryb bb ret retval))
+                 (let ((tryb   (replace-try-break (replace-return tryb bb ret retval) finalb))
                        (catchb (replace-return catchb bb ret retval)))
                    (expand-binding-forms
                     `(scope-block
                       (block
                        ,@(if hasret `((local ,retval)) '())
                        (local ,val)
-		       (local ,finally-exception)
+		               (local ,finally-exception)
                        (= ,err false)
                        ,@(if ret `((= ,ret false)) '())
                        (break-block
@@ -1238,7 +1249,7 @@
                                      tryb))
                              #f
                              (= ,err true)))
-		       (= ,finally-exception (the_exception))
+		               (= ,finally-exception (the_exception))
                        ,finalb
                        (if ,err (ccall 'jl_rethrow_other Void (tuple Any) ,finally-exception))
                        ,(if hasret
